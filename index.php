@@ -9,13 +9,19 @@
 
 <?php
 
-ini_set("display_errors", 0);
+ini_set("display_errors", 1);
 
 set_time_limit(0);
-$CONSUMER_KEY = '9eMvv6vSaZLVUPKBkjhjwg';
-$CONSUMER_SECRET = 'PhBHXplc6DwAwZ4FcQcD-lgw49E';
-$TOKEN = 'kYn5sDa4gzyRMmB_MzYuw6jxpSu9Tfuu';
-$TOKEN_SECRET = 's-eWVTPNcNgj-82HnOpm9o1Y320';
+
+register_shutdown_function('dying');
+
+
+
+
+$CONSUMER_KEY = 'hDdWzPS6tV8OJsYyFXnXZg';
+$CONSUMER_SECRET = 'aU-rZXP3uHY0k_COucfngAKpQRg';
+$TOKEN = 'AqGs34h-i_wZgbW4qt7M_VBRpypKC6-U';
+$TOKEN_SECRET = 'dC_xhKoTzSe50kWyXE9luw_81tM';
 $API_HOST = 'api.yelp.com';
 $SEARCH_LIMIT = 6;
 $SEARCH_PATH = '/v2/search/';
@@ -45,7 +51,7 @@ if(isset($_POST['submit_button']))
  */
 function request($host, $path) {
     $unsigned_url = "https://" . $host . $path;
-
+    // echo $unsigned_url;
     // Token object built using the OAuth library
     $token = new OAuthToken($GLOBALS['TOKEN'], $GLOBALS['TOKEN_SECRET']);
 
@@ -114,7 +120,7 @@ function search($term, $location, $offset) {
     // $url_params['limit'] = $GLOBALS['SEARCH_LIMIT'];
     $url_params['offset'] = $offset;
     $search_path = $GLOBALS['SEARCH_PATH'] . "?" . http_build_query($url_params);
-    echo $search_path;
+    // echo $search_path;
     return request($GLOBALS['API_HOST'], $search_path);
 }
 
@@ -126,7 +132,6 @@ function search($term, $location, $offset) {
  */
 function get_business($business_id) {
     $business_path = $GLOBALS['BUSINESS_PATH'] . urlencode($business_id);
-    
     return request($GLOBALS['API_HOST'], $business_path);
 }
 
@@ -135,24 +140,33 @@ function loop_api_calls($loop_limit, $term, $location){
     if ($loop_limit > 50) {
         $loop_limit = 50;
     }
+    // $loop_limit = 5;
     // $loop_limit = 1;
     for ($i=0; $i <$loop_limit ; $i++) {
         $response = json_decode(search(urldecode($term), urldecode($location), $offset),true);
         $offset += 20;
         loop_results($response['businesses']);
-        //print_r(json_decode($response, true));
-        // echo "<pre>";print_r($response);
+        // print_r(json_decode($response, true));
+        // echo "<pre>";print_r($response);echo "</pre>";
     }
 }
 
 function loop_results($results){
     $parent_array = array();
+    $limit = 0;
     foreach ($results as $result) {
         $child_array = array();
-        // echo "<pre>";
-        // print_r($result);
-
-        // echo "</pre>";
+        echo "S.No:".++$limit."</br>";
+        echo "Name :".$result['name']."<br>";
+        echo "Phone :".$result['phone']."<br>";
+        sleep(3);
+         // if ($limit > 1) {
+         //    return false;
+         // }
+        $website = get_website_from_link($result['url']);
+        if ($website) {
+            $email = get_email_from_site($website);
+        }
         if (isset($result['name'])) {
             $child_array[] = $result['name'];
         } else {
@@ -160,6 +174,16 @@ function loop_results($results){
         }
         if (isset($result['phone'])) {
             $child_array[] = $result['phone'];
+        } else {
+            $child_array[] = '';
+        }
+        if (isset($website)) {
+            $child_array[] = $website;
+        } else {
+            $child_array[] = '';
+        }
+        if (isset($email)) {
+            $child_array[] = $email;
         } else {
             $child_array[] = '';
         }
@@ -212,16 +236,13 @@ function loop_results($results){
         } else {
             $child_array[] = '';
         }
-    // echo "<pre>";
-    // print_r($child_array);
-    // echo "</pre>";
-    write_into_csv_file($child_array);
+        // write_into_csv_file($child_array);
     }
 }
 
 function calculate_total_calls($term, $location){
     $response = json_decode(search(urldecode($term), urldecode($location), 0),true);
-    // echo $response['total'];
+    // print_r($response);
     if (isset($response['total'])) {
         // echo "<pre>";print_r($response);
         $loop_limit = $response['total'] / 20 ;
@@ -231,17 +252,62 @@ function calculate_total_calls($term, $location){
     }
 }
 
+
+function get_website_from_link($link){
+    sleep(1);
+    include_once('simple_html_dom.php');
+    $html = str_get_html(doCall($link));
+    $website = false;
+    if (empty($html)) {
+        echo "No Website Found <hr>";
+        return false;
+    }
+    foreach($html->find('.biz-website a') as $e){
+        $website = $e->innertext;
+    }
+    if ($website) {
+        return $website;
+    }
+    echo "No Website Found <hr>";
+    return $website;
+}
+
+function get_email_from_site($website){
+    if (stripos($website, 'http') === FALSE) {
+        $website = 'http://'.$website;
+    }
+    echo "Website :" . $website."<br>";
+    sleep(1);
+    $html = str_get_html(doCall($website));
+    $email = false;
+    if (empty($html)) {
+        return false;
+    }
+    foreach($html->find('a') as $e){
+        if (stripos($e->href, 'mailto:') !== FALSE) {
+            $email = str_replace('mailto:', '',$e->href);
+            break;
+        }
+    }
+    if (!empty($email)) {
+        echo "email :".$email."<hr>";
+    }
+    echo "Email : empty <hr>";
+    return $email;
+}
+
+
 function write_into_csv_file($data){
     $fp = fopen('file.csv', 'a+');
-    // foreach ($data as $fields) {
+    foreach ($data as $fields) {
         fputcsv($fp, $data);
-    // }
+    }
     fclose($fp);
 }
 
 function write_headers_csv_file(){
     $list = array (
-        array('Name', 'Phone', 'Display Phone', 'Location Address', 'URL', 'Snippet Text', 'Rating', 'Review Count','Is Closed' ,'Location latitude', 'Location longitude'),
+        array('Name', 'Phone', 'Website', 'Email' ,'Display Phone', 'Location Address', 'URL', 'Snippet Text', 'Rating', 'Review Count','Is Closed' ,'Location latitude', 'Location longitude'),
     );
 
     $fp = fopen('file.csv', 'w');
@@ -252,6 +318,59 @@ function write_headers_csv_file(){
 
     fclose($fp);
 
+}
+
+function doCall($URL) //Needs a timeout handler
+{
+    $SSLVerify = false;
+    $URL = trim($URL);
+    if(stripos($URL, 'https://') !== false){ $SSLVerify = true; }
+
+    $HTTPCustomHeaders = array();
+
+
+    $ch = curl_init($URL);
+    curl_setopt($ch, CURLOPT_URL, $URL);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
+    curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.124 Safari/537.36');
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, ($SSLVerify === true) ? 2 : false );
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $SSLVerify);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_HEADER, true);
+
+    if(defined('CURLOPT_IPRESOLVE') && defined('CURL_IPRESOLVE_V4')){
+        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+    }
+
+    if(!empty($options['httpAuth'])){
+        curl_setopt($ch, CURLOPT_USERPWD, $options['httpAuth']['username'].':'.$options['httpAuth']['password']);
+        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+    }
+
+    if(!empty($options['useCookie'])){
+        if(!empty($options['cookie'])){
+            curl_setopt($ch, CURLOPT_COOKIE, $options['cookie']);
+        }
+    }
+
+    @curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+
+
+    $rawResponse      = curl_exec($ch);
+
+
+    curl_close($ch);
+
+
+    return $rawResponse;
+}
+
+function dying(){
+    echo "<pre>";
+    print_r(error_get_last());
+    echo "</pre>";
 }
 ?>
 
