@@ -13,7 +13,7 @@ ini_set("display_errors", 1);
 
 set_time_limit(0);
 
-register_shutdown_function('dying');
+// register_shutdown_function('dying');
 
 
 
@@ -38,7 +38,7 @@ if(isset($_POST['submit_button']))
     write_headers_csv_file();
     $loop_limit = calculate_total_calls($DEFAULT_TERM, $DEFAULT_LOCATION);
     loop_api_calls($loop_limit, $DEFAULT_TERM, $DEFAULT_LOCATION);
-    require_once 'download.php';
+    // require_once 'download.php';
 }
 
 
