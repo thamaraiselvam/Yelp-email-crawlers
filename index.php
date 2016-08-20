@@ -35,7 +35,7 @@ if(isset($_POST['submit_button']))
     parse_str($parts['query'], $query);
     $DEFAULT_TERM = $query['find_desc'];
     $DEFAULT_LOCATION = $query['find_loc'];
-    write_headers_csv_file();
+//    write_headers_csv_file();
     $loop_limit = calculate_total_calls($DEFAULT_TERM, $DEFAULT_LOCATION);
     loop_api_calls($loop_limit, $DEFAULT_TERM, $DEFAULT_LOCATION);
     // require_once 'download.php';
@@ -138,10 +138,10 @@ function get_business($business_id) {
 function loop_api_calls($loop_limit, $term, $location){
     $offset = 0;
     if ($loop_limit > 50) {
-        $loop_limit = 50;
+       // $loop_limit = 50;
     }
     // $loop_limit = 5;
-    // $loop_limit = 1;
+     //$loop_limit = 1;
     for ($i=0; $i <$loop_limit ; $i++) {
         $response = json_decode(search(urldecode($term), urldecode($location), $offset),true);
         $offset += 20;
@@ -156,17 +156,18 @@ function loop_results($results){
     $limit = 0;
     foreach ($results as $result) {
         $child_array = array();
-        echo "S.No:".++$limit."</br>";
+    //    echo "S.No:".++$limit."</br>";
         echo "Name :".$result['name']."<br>";
         echo "Phone :".$result['phone']."<br>";
-        sleep(3);
-         // if ($limit > 1) {
-         //    return false;
+         // if ($limit > 20) {
+       //      return false;
          // }
         $website = get_website_from_link($result['url']);
         if ($website) {
             $email = get_email_from_site($website);
         }
+	flush();
+	sleep(2);
         if (isset($result['name'])) {
             $child_array[] = $result['name'];
         } else {
