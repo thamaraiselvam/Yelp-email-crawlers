@@ -157,9 +157,9 @@ function get_business($business_id) {
 
 function loop_api_calls($loop_limit, $term, $location){
     $offset = 0;
-    // if ($loop_limit > 50) {
-       // $loop_limit = 50;
-    // }
+    if ($loop_limit > 50) {
+       $loop_limit = 50;
+    }
     // die($loop_limit);
     // $loop_limit = 5;
      //$loop_limit = 1;
