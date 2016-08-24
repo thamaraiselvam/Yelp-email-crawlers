@@ -7,47 +7,63 @@
 ###############################################################
 # Visit http://www.zubrag.com/scripts/ for updates
 ############################################################### 
+ini_set("display_errors", 1);
+register_shutdown_function('dying');
+write_headers_csv_file();
 
+function write_headers_csv_file(){
+    $list = array (
+        array('Name', 'Phone', 'Website', 'Email' ,'Display Phone', 'Location Address', 'URL', 'Snippet Text', 'Rating', 'Review Count','Is Closed' ,'Location latitude', 'Location longitude'),
+    );
+    $file = getcwd().'/files.csv';
+    echo $file;
+    $fp = fopen( $file ,'a+');
 
-$the_url = isset($_REQUEST['url']) ? htmlspecialchars($_REQUEST['url']) : '';
-?>
-
-<form method="post">
-  Please enter full URL of the page to parse (including http://):<br />
-  <input type="text" name="url" size="65" value="<?php echo $the_url;  ?>"/><br />
-  or enter text directly into textarea below:<br />
-  <textarea name="text" cols="50" rows="15"></textarea>
-  <br />
-  <input type="submit" value="Parse Emails" />
-</form>
-
-<?php
-if (isset($_REQUEST['url']) && !empty($_REQUEST['url'])) {
-  // fetch data from specified url
-  $text = file_get_contents($_REQUEST['url']);
-}
-elseif (isset($_REQUEST['text']) && !empty($_REQUEST['text'])) {
-  // get text from text area
-  $text = $_REQUEST['text'];
-}
-
-// parse emails
-if (!empty($text)) {
-  $res = preg_match_all(
-    "/[a-z0-9]+([_\\.-][a-z0-9]+)*@([a-z0-9]+([\.-][a-z0-9]+)*)+\\.[a-z]{2,}/i",
-    $text,
-    $matches
-  );
-  print_r($matches);
-  if ($res) {
-    foreach(array_unique($matches[0]) as $email) {
-      echo $email . "<br />";
+    foreach ($list as $fields) {
+        fputcsv($fp, $list);
     }
-  }
-  else {
-    echo "No emails found.";
-  }
+
+    fclose($fp);
+
 }
+
+
+function dying(){
+    echo "<pre>";
+    print_r(error_get_last());
+    echo "</pre>";
+}
+
+// $the_url = isset($_REQUEST['url']) ? htmlspecialchars($_REQUEST['url']) : '';
+// 
+
+
+// if (isset($_REQUEST['url']) && !empty($_REQUEST['url'])) {
+//   // fetch data from specified url
+//   $text = file_get_contents($_REQUEST['url']);
+// }
+// elseif (isset($_REQUEST['text']) && !empty($_REQUEST['text'])) {
+//   // get text from text area
+//   $text = $_REQUEST['text'];
+// }
+
+// // parse emails
+// if (!empty($text)) {
+//   $res = preg_match_all(
+//     "/[a-z0-9]+([_\\.-][a-z0-9]+)*@([a-z0-9]+([\.-][a-z0-9]+)*)+\\.[a-z]{2,}/i",
+//     $text,
+//     $matches
+//   );
+//   print_r($matches);
+//   if ($res) {
+//     foreach(array_unique($matches[0]) as $email) {
+//       echo $email . "<br />";
+//     }
+//   }
+//   else {
+//     echo "No emails found.";
+//   }
+// }
 
 
 // include_once('simple_html_dom.php');

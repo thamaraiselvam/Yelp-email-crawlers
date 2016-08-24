@@ -11,12 +11,14 @@
 
 ini_set("display_errors", 1);
 set_time_limit(0);
-
+global $count;
+$count = 0;
 require_once('simple_html_dom.php');
 require_once('lib/Ouath.php');
 
 if(isset($_POST['submit_button']))
 {
+    clear_prev_results();
     $CONSUMER_KEY       = 'hDdWzPS6tV8OJsYyFXnXZg';
     $CONSUMER_SECRET    = 'aU-rZXP3uHY0k_COucfngAKpQRg';
     $TOKEN              = 'AqGs34h-i_wZgbW4qt7M_VBRpypKC6-U';
@@ -33,22 +35,27 @@ if(isset($_POST['submit_button']))
     $DEFAULT_TERM       = $query['find_desc'];
     $DEFAULT_LOCATION   = $query['find_loc'];
     $loop = 0;
+    write_headers_csv_file();
     foreach ($neighbourhoods as $neighbourhood) {
-        if ($loop++ > 1) {
-            echo "exit";
-            break;
-        }
+        // if ($loop++ > 1) {
+        //     echo "exit";
+        //     break;
+        // }
         echo "Neighbourhood :".$neighbourhood."<br />";
         $new_location = '';
         $new_location =  $neighbourhood.' ,'.$DEFAULT_LOCATION;
         sleep(3);
         $loop_limit = calculate_total_calls($DEFAULT_TERM, $new_location);
-        // echo $loop_limit."+";
+        // echo "Loop Limit: ".$loop_limit."<br />";
         flush();
         loop_api_calls($loop_limit, $DEFAULT_TERM, $new_location);
     }
-//    write_headers_csv_file();
-    // require_once 'download.php';
+    require_once 'download.php';
+}
+
+function clear_prev_results(){
+    $file = getcwd().'/results.csv';
+    $fp = fopen( $file ,'w');
 }
 
 function get_neighbourhoods($query){
@@ -159,39 +166,44 @@ function loop_api_calls($loop_limit, $term, $location){
     for ($i=0; $i <$loop_limit ; $i++) {
         $response = json_decode(search(urldecode($term), urldecode($location), $offset),true);
        $offset += 20;
-        loop_results($response['businesses']);
+        $result = loop_results($response['businesses']);
+        // if ($result === false) {
+        //     return false;
+        // }
         // print_r(json_decode($response, true));
         // echo "<pre>";print_r($response);echo "</pre>";
     }
 }
 
 function loop_results($results){
+    global $count;
     $parent_array = array();
     $limit = 0;
     foreach ($results as $result) {
         $child_array = array();
+        echo 'No of result: '.++$count."<br />";
     //    echo "S.No:".++$limit."</br>";
-        echo "Name :".$result['name']."<br>";
-        echo "Phone :".$result['phone']."<br>";
-         // if ($limit > 20) {
-       //      return false;
-         // }
-        $website = get_website_from_link($result['url']);
-        if ($website) {
-            $email = get_email_from_site($website);
-        }
-	flush();
-	sleep(2);
+        // if ($limit > 5) {
+        //     return false;
+        // }
         if (isset($result['name'])) {
             $child_array[] = $result['name'];
+            echo "Name :".$result['name']."<br>";
         } else {
             $child_array[] = '';
         }
         if (isset($result['phone'])) {
             $child_array[] = $result['phone'];
+            echo "Phone :".$result['phone']."<br>";
         } else {
             $child_array[] = '';
         }
+        $website = get_website_from_link($result['url']);
+        if ($website) {
+            $email = get_email_from_site($website);
+        }
+	    flush();
+	    sleep(2);
         if (isset($website)) {
             $child_array[] = $website;
         } else {
@@ -221,16 +233,11 @@ function loop_results($results){
         } else {
             $child_array[] = '';
         }
-        if (isset($result['snippet_text'])) {
-            $child_array[] = $result['snippet_text'];
-        } else {
-            $child_array[] = '';
-        }
-        if (isset($result['rating'])) {
-            $child_array[] = $result['rating'];
-        } else {
-            $child_array[] = '';
-        }
+        // if (isset($result['rating'])) {
+        //     $child_array[] = $result['rating'];
+        // } else {
+        //     $child_array[] = '';
+        // }
         if (isset($result['review_count'])) {
             $child_array[] = $result['review_count'];
         } else {
@@ -251,7 +258,8 @@ function loop_results($results){
         } else {
             $child_array[] = '';
         }
-        // write_into_csv_file($child_array);
+        echo "writing results into files...<hr />";
+        write_into_csv_file($child_array);
     }
 }
 
@@ -263,6 +271,7 @@ function calculate_total_calls($term, $location){
     // exit;
     // die($response['total']);
     if (isset($response['total'])) {
+        echo "Neighbourhood result count: ".$response['total']."<br />";
         // echo "<pre>";print_r($response);
         $loop_limit = $response['total'] / 20 ;
         return ceil($loop_limit);
@@ -273,7 +282,7 @@ function calculate_total_calls($term, $location){
 
 
 function get_website_from_link($link){
-    sleep(1);
+    sleep(2);
     include_once('simple_html_dom.php');
     $html = str_get_html(doCall($link));
     $website = false;
@@ -304,9 +313,9 @@ function get_email_from_site($website){
         $email = deep_email_search($website);
     }
     if ($email) {
-        echo "Email : ".$email . "<hr/>";
+        echo "Email : ".$email . "<br/>";
     } else {
-        echo "Email : Not found <hr/>";
+        echo "Email : Not found <br/>";
     }
     return $email;
 }
@@ -331,7 +340,7 @@ function parse_email($link){
 }
 
 function deep_email_search($website){
-    echo "Parsing other pages...";
+    echo "Parsing other pages...<br />";
     sleep(2);
     $html = str_get_html(doCall($website));
     $email = false;
@@ -351,19 +360,27 @@ function deep_email_search($website){
 }
 
 function write_into_csv_file($data){
-    $fp = fopen('file.csv', 'a+');
-    foreach ($data as $fields) {
-        fputcsv($fp, $data);
-    }
+    $file = getcwd().'/results.csv';
+    $fp = fopen( $file ,'a+');
+    // echo "<pre>";
+    // print_r($data);
+    // echo "</pre>";
+    // foreach ($data as $fields) {
+    //     echo "<pre>";
+    // print_r($fields);
+    // echo "</pre>";
+    fputcsv($fp, $data);
+    // }
     fclose($fp);
 }
 
 function write_headers_csv_file(){
     $list = array (
-        array('Name', 'Phone', 'Website', 'Email' ,'Display Phone', 'Location Address', 'URL', 'Snippet Text', 'Rating', 'Review Count','Is Closed' ,'Location latitude', 'Location longitude'),
+        array('Name', 'Phone', 'Website', 'Email' ,'Display Phone', 'Location Address', 'URL', 'Review Count','Is Closed' ,'Location latitude', 'Location longitude'),
     );
 
-    $fp = fopen('file.csv', 'w');
+    $file = getcwd().'/results.csv';
+    $fp = fopen( $file ,'w');
 
     foreach ($list as $fields) {
         fputcsv($fp, $fields);
@@ -378,45 +395,19 @@ function doCall($URL) //Needs a timeout handler
     $SSLVerify = false;
     $URL = trim($URL);
     if(stripos($URL, 'https://') !== false){ $SSLVerify = true; }
-
-    $HTTPCustomHeaders = array();
-
-
     $ch = curl_init($URL);
     curl_setopt($ch, CURLOPT_URL, $URL);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
     curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.124 Safari/537.36');
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.124 Safari/537.36');
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, ($SSLVerify === true) ? 2 : false );
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $SSLVerify);
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
     curl_setopt($ch, CURLOPT_HEADER, true);
-
-    if(defined('CURLOPT_IPRESOLVE') && defined('CURL_IPRESOLVE_V4')){
-        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-    }
-
-    if(!empty($options['httpAuth'])){
-        curl_setopt($ch, CURLOPT_USERPWD, $options['httpAuth']['username'].':'.$options['httpAuth']['password']);
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-    }
-
-    if(!empty($options['useCookie'])){
-        if(!empty($options['cookie'])){
-            curl_setopt($ch, CURLOPT_COOKIE, $options['cookie']);
-        }
-    }
-
     @curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-
-
     $rawResponse      = curl_exec($ch);
-
-
     curl_close($ch);
-
-
     return $rawResponse;
 }
 
