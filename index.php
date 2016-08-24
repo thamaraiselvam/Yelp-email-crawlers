@@ -10,49 +10,71 @@
 <?php
 
 ini_set("display_errors", 1);
-
 set_time_limit(0);
 
-// register_shutdown_function('dying');
-
-
-
-
-$CONSUMER_KEY = 'hDdWzPS6tV8OJsYyFXnXZg';
-$CONSUMER_SECRET = 'aU-rZXP3uHY0k_COucfngAKpQRg';
-$TOKEN = 'AqGs34h-i_wZgbW4qt7M_VBRpypKC6-U';
-$TOKEN_SECRET = 'dC_xhKoTzSe50kWyXE9luw_81tM';
-$API_HOST = 'api.yelp.com';
-$SEARCH_LIMIT = 6;
-$SEARCH_PATH = '/v2/search/';
-$BUSINESS_PATH = '/v2/business/';
+require_once('simple_html_dom.php');
+require_once('lib/Ouath.php');
 
 if(isset($_POST['submit_button']))
 {
-    require_once('lib/Ouath.php');
-    $url=$_REQUEST['query'];
-    $parts = parse_url($url);
+    $CONSUMER_KEY       = 'hDdWzPS6tV8OJsYyFXnXZg';
+    $CONSUMER_SECRET    = 'aU-rZXP3uHY0k_COucfngAKpQRg';
+    $TOKEN              = 'AqGs34h-i_wZgbW4qt7M_VBRpypKC6-U';
+    $TOKEN_SECRET       = 'dC_xhKoTzSe50kWyXE9luw_81tM';
+    $API_HOST           = 'api.yelp.com';
+    // $SEARCH_LIMIT       = 6;
+    $SEARCH_PATH        = '/v2/search/';
+    $BUSINESS_PATH      = '/v2/business/';
+    $url                = $_REQUEST['query'];
+    $neighbourhoods     = get_neighbourhoods($url);
+    sleep(1);
+    $parts              = parse_url($url);
     parse_str($parts['query'], $query);
-    $DEFAULT_TERM = $query['find_desc'];
-    $DEFAULT_LOCATION = $query['find_loc'];
+    $DEFAULT_TERM       = $query['find_desc'];
+    $DEFAULT_LOCATION   = $query['find_loc'];
+    $loop = 0;
+    foreach ($neighbourhoods as $neighbourhood) {
+        if ($loop++ > 1) {
+            echo "exit";
+            break;
+        }
+        echo "Neighbourhood :".$neighbourhood."<br />";
+        $new_location = '';
+        $new_location =  $neighbourhood.' ,'.$DEFAULT_LOCATION;
+        sleep(3);
+        $loop_limit = calculate_total_calls($DEFAULT_TERM, $new_location);
+        // echo $loop_limit."+";
+        flush();
+        loop_api_calls($loop_limit, $DEFAULT_TERM, $new_location);
+    }
 //    write_headers_csv_file();
-    $loop_limit = calculate_total_calls($DEFAULT_TERM, $DEFAULT_LOCATION);
-    loop_api_calls($loop_limit, $DEFAULT_TERM, $DEFAULT_LOCATION);
     // require_once 'download.php';
 }
 
+function get_neighbourhoods($query){
+    sleep(1);
+    $html = str_get_html(doCall($query));
+    $website = false;
+    if (empty($html)) {
+        echo "No Website Found <hr>";
+        die('Erro : Cannot get neighbourhoods');
+    }
+    $neighbourhoods = array();
+    foreach($html->find('.place input') as $e){
+        $result = explode('::', $e->value);
+        if (empty($result[1])) {
+            $result2 = explode(':', $e->value);
+            $neighbourhoods[] = $result2[1];
+        } else {
+            $neighbourhoods[] = $result[1];
+        }
+    }
+    return $neighbourhoods;
+}
 
-/** 
- * Makes a request to the Yelp API and returns the response
- * 
- * @param    $host    The domain host of the API 
- * @param    $path    The path of the APi after the domain
- * @return   The JSON response from the request      
- */
+
 function request($host, $path) {
     $unsigned_url = "https://" . $host . $path;
-    // echo $unsigned_url;
-    // Token object built using the OAuth library
     $token = new OAuthToken($GLOBALS['TOKEN'], $GLOBALS['TOKEN_SECRET']);
 
     // Consumer object built using the OAuth library
@@ -75,6 +97,7 @@ function request($host, $path) {
     $signed_url = $oauthrequest->to_url();
    
     // Send Yelp API Call
+
     try {
        
         $ch = curl_init($signed_url);
@@ -95,41 +118,31 @@ function request($host, $path) {
 
         curl_close($ch);
     } catch(Exception $e) {
-
         trigger_error(sprintf(
             'Curl failed with error #%d: %s',
             $e->getCode(), $e->getMessage()),
             E_USER_ERROR);
     }
-    
     return $data;
 }
 
-/**
- * Query the Search API by a search term and location 
- * 
- * @param    $term        The search term passed to the API 
- * @param    $location    The search location passed to the API 
- * @return   The JSON response from the request 
- */
+
 function search($term, $location, $offset) {
     $url_params = array();
    
     $url_params['term'] = $term ?: $GLOBALS['DEFAULT_TERM'];
     $url_params['location'] = $location?: $GLOBALS['DEFAULT_LOCATION'];
+    // $url_params['location'] = 'Burleith, Washington DC, DC';
     // $url_params['limit'] = $GLOBALS['SEARCH_LIMIT'];
     $url_params['offset'] = $offset;
+    // $url_params['l'] = 'p:DC:Washington::Hillcrest';
     $search_path = $GLOBALS['SEARCH_PATH'] . "?" . http_build_query($url_params);
-    // echo $search_path;
+    // echo $search_path."<break>";
+    // return false;
     return request($GLOBALS['API_HOST'], $search_path);
 }
 
-/**
- * Query the Business API by business_id
- * 
- * @param    $business_id    The ID of the business to query
- * @return   The JSON response from the request 
- */
+
 function get_business($business_id) {
     $business_path = $GLOBALS['BUSINESS_PATH'] . urlencode($business_id);
     return request($GLOBALS['API_HOST'], $business_path);
@@ -137,14 +150,15 @@ function get_business($business_id) {
 
 function loop_api_calls($loop_limit, $term, $location){
     $offset = 0;
-    if ($loop_limit > 50) {
+    // if ($loop_limit > 50) {
        // $loop_limit = 50;
-    }
+    // }
+    // die($loop_limit);
     // $loop_limit = 5;
      //$loop_limit = 1;
     for ($i=0; $i <$loop_limit ; $i++) {
         $response = json_decode(search(urldecode($term), urldecode($location), $offset),true);
-        $offset += 20;
+       $offset += 20;
         loop_results($response['businesses']);
         // print_r(json_decode($response, true));
         // echo "<pre>";print_r($response);echo "</pre>";
@@ -243,7 +257,11 @@ function loop_results($results){
 
 function calculate_total_calls($term, $location){
     $response = json_decode(search(urldecode($term), urldecode($location), 0),true);
+    // echo "<pre>";
     // print_r($response);
+    // echo "</pre>";
+    // exit;
+    // die($response['total']);
     if (isset($response['total'])) {
         // echo "<pre>";print_r($response);
         $loop_limit = $response['total'] / 20 ;
@@ -274,29 +292,63 @@ function get_website_from_link($link){
 }
 
 function get_email_from_site($website){
+    echo "Parsing email from main page...<br />";
     if (stripos($website, 'http') === FALSE) {
         $website = 'http://'.$website;
     }
     echo "Website :" . $website."<br>";
     sleep(1);
+    $email = parse_email($website);
+    if (empty($email)) {
+        echo "Deep searching email ...<br />";
+        $email = deep_email_search($website);
+    }
+    if ($email) {
+        echo "Email : ".$email . "<hr/>";
+    } else {
+        echo "Email : Not found <hr/>";
+    }
+    return $email;
+}
+
+function parse_email($link){
+    $text = doCall($link);
+    if (!empty($text)) {
+        $res = preg_match_all(
+            "/[a-z0-9]+([_\\.-][a-z0-9]+)*@([a-z0-9]+([\.-][a-z0-9]+)*)+\\.[a-z]{2,}/i",
+            $text,
+            $matches
+        );
+        if ($res) {
+            foreach(array_unique($matches[0]) as $email) {
+                return $email;
+            }
+        }
+        else {
+            return false;
+        }
+    }
+}
+
+function deep_email_search($website){
+    echo "Parsing other pages...";
+    sleep(2);
     $html = str_get_html(doCall($website));
     $email = false;
     if (empty($html)) {
         return false;
     }
+    $email = false;
     foreach($html->find('a') as $e){
-        if (stripos($e->href, 'mailto:') !== FALSE) {
-            $email = str_replace('mailto:', '',$e->href);
-            break;
+        if (stripos($e->href, 'contact') !== FALSE || stripos($e->href, 'about') !== FALSE || stripos($e->href, 'impressum') !== FALSE) {
+            $email = parse_email($e->href);
+            if ($email) {
+                break;
+            }
         }
     }
-    if (!empty($email)) {
-        echo "email :".$email."<hr>";
-    }
-    echo "Email : empty <hr>";
     return $email;
 }
-
 
 function write_into_csv_file($data){
     $fp = fopen('file.csv', 'a+');
