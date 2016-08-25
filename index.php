@@ -181,6 +181,8 @@ function loop_results($results){
     $limit = 0;
     foreach ($results as $result) {
         $child_array = array();
+        $website     = '';
+        $email       = '';
         echo 'No of result: '.++$count."<br />";
     //    echo "S.No:".++$limit."</br>";
         // if ($limit > 5) {
@@ -321,6 +323,7 @@ function get_email_from_site($website){
 }
 
 function parse_email($link){
+    echo "Parsing : ".$link."<br>";
     $text = doCall($link);
     if (!empty($text)) {
         $res = preg_match_all(
@@ -350,13 +353,40 @@ function deep_email_search($website){
     $email = false;
     foreach($html->find('a') as $e){
         if (stripos($e->href, 'contact') !== FALSE || stripos($e->href, 'about') !== FALSE || stripos($e->href, 'impressum') !== FALSE) {
-            $email = parse_email($e->href);
+            sleep(3);
+            $deep_link = make_valid_url($website, $e->href);
+            $email = parse_email($deep_link);
             if ($email) {
                 break;
             }
         }
     }
     return $email;
+}
+
+function make_valid_url($website, $deep_link){
+    if (stripos($deep_link, 'http') !== FALSE) {
+        echo "valid URL :".$deep_link."</br>";
+        return $deep_link;
+    }
+    $parsed_url = parse_url($deep_link);
+    if (empty($parsed_url['host'])) {
+        $link = addTrailingSlash($website).removeBeginningSlash($deep_link);
+        echo "Formed valid URL :".$link."</br>";
+        return $link;
+    }
+}
+
+function addTrailingSlash($string) {
+    return removeTrailingSlash($string) . '/';
+}
+
+function removeTrailingSlash($string) {
+    return rtrim($string, '/');
+}
+
+function removeBeginningSlash($string) {
+    return ltrim($string, '/');
 }
 
 function write_into_csv_file($data){
