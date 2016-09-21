@@ -436,11 +436,11 @@ function doCall($URL) //Needs a timeout handler
     curl_setopt($ch, CURLOPT_HEADER, true);
     @curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
     $rawResponse      = curl_exec($ch);
-    curl_close($ch);
     echo $rawResponse;
 echo curl_getinfo($ch) . '<br/>';
 echo curl_errno($ch) . '<br/>';
 echo curl_error($ch) . '<br/>';
+    curl_close($ch);
     return $rawResponse;
 }
 
