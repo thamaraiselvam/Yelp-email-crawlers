@@ -50,7 +50,7 @@ if(isset($_POST['submit_button']))
         flush();
         loop_api_calls($loop_limit, $DEFAULT_TERM, $new_location);
     }
-    require_once 'download.php';
+    // require_once 'download.php';
 }
 
 function clear_prev_results(){
@@ -450,5 +450,3 @@ function dying(){
     print_r(error_get_last());
     echo "</pre>";
 }
-?>
-
