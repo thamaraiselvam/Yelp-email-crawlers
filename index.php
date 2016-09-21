@@ -1,3 +1,7 @@
+<?php
+ini_set("display_errors", 1);
+set_time_limit(0); ?>
+
 <head>
     <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
 </head>
@@ -6,10 +10,7 @@
     <br>
     <input type="submit" class="btn btn-primary" value="Download results" name="submit_button" />
 </form>
-
 <?php
-ini_set("display_errors", 1);
-set_time_limit(0);
 global $count;
 $count = 0;
 require_once('simple_html_dom.php');
@@ -436,10 +437,10 @@ function doCall($URL) //Needs a timeout handler
     curl_setopt($ch, CURLOPT_HEADER, true);
     @curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
     $rawResponse      = curl_exec($ch);
-    echo $rawResponse;
-echo curl_getinfo($ch) . '<br/>';
-echo curl_errno($ch) . '<br/>';
-echo curl_error($ch) . '<br/>';
+    // echo $rawResponse;
+// echo curl_getinfo($ch) . '<br/>';
+// echo curl_errno($ch) . '<br/>';
+// echo curl_error($ch) . '<br/>';
     curl_close($ch);
     return $rawResponse;
 }
