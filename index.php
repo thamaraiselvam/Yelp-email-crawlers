@@ -438,6 +438,7 @@ function doCall($URL) //Needs a timeout handler
     $rawResponse      = curl_exec($ch);
     curl_close($ch);
     echo $rawResponse;
+    dying();
     return $rawResponse;
 }
 
