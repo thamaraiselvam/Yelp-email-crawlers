@@ -8,7 +8,6 @@
 </form>
 
 <?php
-
 ini_set("display_errors", 1);
 set_time_limit(0);
 global $count;
@@ -21,8 +20,8 @@ if(isset($_POST['submit_button']))
     clear_prev_results();
     $CONSUMER_KEY       = 'hDdWzPS6tV8OJsYyFXnXZg';
     $CONSUMER_SECRET    = 'aU-rZXP3uHY0k_COucfngAKpQRg';
-    $TOKEN              = 'AqGs34h-i_wZgbW4qt7M_VBRpypKC6-U';
-    $TOKEN_SECRET       = 'dC_xhKoTzSe50kWyXE9luw_81tM';
+    $TOKEN              = 'OTWQ_o6O_MkSZb2u4nJoFhHPaFQh0Jip';
+    $TOKEN_SECRET       = 'cekX4r59aDQNOY93AoyaNB41Rqk';
     $API_HOST           = 'api.yelp.com';
     // $SEARCH_LIMIT       = 6;
     $SEARCH_PATH        = '/v2/search/';
