@@ -19,10 +19,10 @@ require_once('lib/Ouath.php');
 if(isset($_POST['submit_button']))
 {
     clear_prev_results();
-    $CONSUMER_KEY       = 'hDdWzPS6tV8OJsYyFXnXZg';
-    $CONSUMER_SECRET    = 'aU-rZXP3uHY0k_COucfngAKpQRg';
-    $TOKEN              = 'OTWQ_o6O_MkSZb2u4nJoFhHPaFQh0Jip';
-    $TOKEN_SECRET       = 'cekX4r59aDQNOY93AoyaNB41Rqk';
+    $CONSUMER_KEY       = '';
+    $CONSUMER_SECRET    = '';
+    $TOKEN              = '';
+    $TOKEN_SECRET       = '';
     $API_HOST           = 'api.yelp.com';
     // $SEARCH_LIMIT       = 6;
     $SEARCH_PATH        = '/v2/search/';
